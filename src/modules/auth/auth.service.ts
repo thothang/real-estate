@@ -69,7 +69,6 @@ export class AuthService {
       password: dto.password,
       phone: dto.phone,
       zaloPhone: dto.zaloPhone,
-      role: dto.role,
     });
 
     return this.signToken(user);

@@ -20,14 +20,11 @@ export interface SavedImage {
 @Injectable()
 export class UploadsService {
   private readonly uploadDir: string;
-  private readonly baseUrl: string;
 
   constructor(private readonly configService: ConfigService) {
     this.uploadDir =
       this.configService.get<string>('UPLOAD_DIR') ||
       path.join(process.cwd(), 'uploads');
-    this.baseUrl =
-      this.configService.get<string>('APP_URL') || 'http://localhost:3000';
   }
 
   private getExt(mimetype: string): string {
@@ -85,10 +82,9 @@ export class UploadsService {
       await fs.writeFile(filePath, file.buffer);
 
       const urlPath = `/uploads/properties/${propertyId}/${filename}`;
-      const url = `${this.baseUrl}${urlPath}`;
 
       result.push({
-        url,
+        url: urlPath,
         isPrimary: i === primaryIdx,
         displayOrder: i,
       });

@@ -10,6 +10,8 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import * as express from 'express';
+import { UnprocessableEntityException } from '@nestjs/common';
+import type { ValidationError } from 'class-validator';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -27,6 +29,35 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
       transform: true,
       transformOptions: { enableImplicitConversion: true },
+      exceptionFactory: (errors: ValidationError[]) => {
+        const details = (errors || []).flatMap((e) => {
+          const constraints = e.constraints
+            ? Object.values(e.constraints)
+            : undefined;
+
+          const base = constraints?.length
+            ? constraints.map((issue) => ({ field: e.property, issue }))
+            : [{ field: e.property, issue: 'Invalid value' }];
+
+          const childDetails = (e.children || []).flatMap((c) => {
+            const childConstraints = c.constraints
+              ? Object.values(c.constraints)
+              : undefined;
+            return (childConstraints?.length
+              ? childConstraints
+              : ['Invalid value']
+            ).map((issue) => ({ field: `${e.property}.${c.property}`, issue }));
+          });
+
+          return [...base, ...childDetails];
+        });
+
+        return new UnprocessableEntityException({
+          code: 'VALIDATION_ERROR',
+          message: 'Vui lòng kiểm tra lại thông tin nhập vào',
+          details,
+        });
+      },
     }),
   );
 

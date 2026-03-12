@@ -8,11 +8,11 @@ export function slugify(text: string): string {
     .trim()
     .toLowerCase()
     .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/\p{Diacritic}/gu, '')
     .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'd')
     .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
+    .replace(/[\s_]+/g, '-')
     .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '') || 'property';
+    .replace(/^-+|-+$/g, '') || 'property';
 }

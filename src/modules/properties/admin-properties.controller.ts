@@ -42,9 +42,11 @@ export class AdminPropertiesController {
     @Query('limit') limit?: number,
     @Query('status') status?: ListingStatus,
   ) {
+    const pageNum = Math.max(1, Number(page) || 1);
+    const limitNum = Math.max(1, Number(limit) || 20);
     return this.propertiesService.findAllAdmin(
-      page ? Number(page) : 1,
-      limit ? Number(limit) : 20,
+      pageNum,
+      limitNum,
       status,
     );
   }
