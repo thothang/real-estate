@@ -1,0 +1,170 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String     @id @default(uuid())
+  name         String
+  email        String     @unique
+  phone        String?
+  zaloPhone    String?
+  passwordHash String
+  role         UserRole   @default(user)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  properties   Property[]
+}
+
+model Property {
+  id              String             @id @default(uuid())
+  title           String
+  slug            String             @unique
+  propertyType    PropertyType
+  listingType     ListingType
+  price           Float
+  direction       Direction?
+  legalStatus     LegalStatus?
+  description     String?
+  viewCount       Int                @default(0)
+  postedBy        String
+  postedDate      DateTime           @default(now())
+  available       Boolean            @default(true)
+  status          ListingStatus
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  contactRequests ContactRequest[]
+  user            User               @relation(fields: [postedBy], references: [id])
+  address         PropertyAddress?
+  area            PropertyArea?
+  features        PropertyFeature[]
+  images          PropertyImage[]
+  structure       PropertyStructure?
+}
+
+model PropertyAddress {
+  propertyId  String   @id
+  fullAddress String?
+  ward        String?
+  district    String?
+  city        String?
+  latitude    Float?
+  longitude   Float?
+  property    Property @relation(fields: [propertyId], references: [id])
+}
+
+model PropertyStructure {
+  propertyId  String   @id
+  floors      Int?
+  bedrooms    Int?
+  bathrooms   Int?
+  livingRooms Int?
+  kitchens    Int?
+  mezzanine   Boolean?
+  balcony     Boolean?
+  property    Property @relation(fields: [propertyId], references: [id])
+}
+
+model PropertyArea {
+  propertyId String   @id
+  width      Float?
+  length     Float?
+  landArea   Float?
+  usableArea Float?
+  property   Property @relation(fields: [propertyId], references: [id])
+}
+
+model PropertyImage {
+  id           String   @id @default(uuid())
+  propertyId   String
+  url          String
+  isPrimary    Boolean  @default(false)
+  displayOrder Int?
+  createdAt    DateTime @default(now())
+  property     Property @relation(fields: [propertyId], references: [id])
+}
+
+model Feature {
+  id          String            @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime          @default(now())
+  properties  PropertyFeature[]
+}
+
+model PropertyFeature {
+  propertyId String
+  featureId  String
+  feature    Feature  @relation(fields: [featureId], references: [id])
+  property   Property @relation(fields: [propertyId], references: [id])
+
+  @@id([propertyId, featureId])
+}
+
+model ContactRequest {
+  id            String        @id @default(uuid())
+  propertyId    String
+  customerName  String
+  customerPhone String
+  customerEmail String?
+  message       String?
+  status        ContactStatus @default(new)
+  notes         String?
+  createdAt     DateTime      @default(now())
+  property      Property      @relation(fields: [propertyId], references: [id])
+}
+
+enum PropertyType {
+  house
+  apartment
+  villa
+  townhouse
+  land
+  office
+}
+
+enum ListingType {
+  sale
+  rent
+}
+
+enum LegalStatus {
+  red_book
+  pink_book
+  contract
+  unknown
+}
+
+enum Direction {
+  north
+  south
+  east
+  west
+  north_east
+  north_west
+  south_east
+  south_west
+}
+
+enum ListingStatus {
+  draft
+  published
+  sold
+  rented
+}
+
+enum ContactStatus {
+  new
+  contacted
+  resolved
+}
+
+enum UserRole {
+  user
+  agent
+  admin
+}

@@ -1,0 +1,495 @@
+# 📖 Real Estate API Documentation
+
+## 1. Overview
+Hệ thống API quản lý nền tảng bất động sản, được chia làm 2 phân hệ chính:
+- **Public API**: Dành cho người dùng cuối (không cần đăng nhập) để tìm kiếm, xem chi tiết tin đăng và gửi form liên hệ. Tính năng "Chat qua Zalo" được xử lý ở phía client bằng cách sử dụng trường `zalo_phone` trả về từ API chi tiết tin đăng.
+- **Admin API**: Dành cho quản trị viên (yêu cầu đăng nhập) để quản lý toàn bộ vòng đời của tin đăng, hình ảnh, tiện ích và các yêu cầu liên hệ.
+
+- **Base URL**: `https://api.yourdomain.com/api/v1`
+- **Data Format**: `application/json` (Ngoại trừ API upload hình ảnh sử dụng `multipart/form-data`)
+- **Version**: `v1`
+
+## 2. Authentication
+Các API dành cho Admin (tiền tố `/admin/*`) yêu cầu xác thực bằng JWT Bearer Token. Frontend cần đính kèm token vào HTTP Header của mỗi request.
+
+Cách gửi token trong request header:
+```http
+Authorization: Bearer <your_jwt_token>
+```
+> **Lưu ý**: Nếu token không hợp lệ hoặc hết hạn, API sẽ trả về lỗi HTTP 401 Unauthorized.
+
+## 3. Standard Response Format
+Để Frontend dễ dàng xây dựng interceptor, tất cả các API đều tuân thủ chặt chẽ định dạng JSON dưới đây.
+
+**Success Response (HTTP 200, 201)**
+```json
+{
+  "success": true,
+  "message": "Mô tả kết quả thành công",
+  "data": {
+    // Payload dữ liệu trả về (Object hoặc Array)
+  },
+  "meta": {
+    // Chỉ xuất hiện trong các API trả về danh sách có phân trang
+    "page": 1,
+    "limit": 20,
+    "total_items": 100,
+    "total_pages": 5
+  },
+  "timestamp": "2026-03-06T22:00:00Z"
+}
+```
+
+**Error Response (HTTP 400, 401, 403, 404, 422, 500)**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Thông báo lỗi dễ hiểu cho người dùng",
+    "details": [
+      // Chi tiết lỗi (thường dùng cho validation form)
+    ]
+  },
+  "timestamp": "2026-03-06T22:00:00Z"
+}
+```
+
+## 4. API Endpoints
+
+### 4.1. Public Endpoints (Guest Users)
+
+#### 4.1.1. Browse & Filter Properties
+- **Method**: `GET`
+- **Endpoint URL**: `/properties`
+- **Description**: Lấy danh sách tin đăng bất động sản đang hiển thị (status = published). Hỗ trợ lọc nhiều tiêu chí và phân trang.
+- **Request Body**: Không có.
+
+**Query Parameters:**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `page` | Integer | No | Số trang hiện tại (Mặc định: 1) |
+| `limit` | Integer | No | Số bản ghi trên 1 trang (Mặc định: 20) |
+| `property_type` | String | No | Lọc theo loại: `house`, `apartment`, `villa`, `townhouse`, `land`, `office` |
+| `listing_type` | String | No | Lọc theo mục đích: `sale`, `rent` |
+| `city` | String | No | Lọc theo Tỉnh/Thành phố |
+| `district` | String | No | Lọc theo Quận/Huyện |
+| `min_price` | Numeric | No | Mức giá thấp nhất |
+| `max_price` | Numeric | No | Mức giá cao nhất |
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Lấy danh sách thành công",
+  "data": [
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "title": "Căn hộ chung cư cao cấp Quận 1",
+      "slug": "can-ho-chung-cu-cao-cap-quan-1",
+      "property_type": "apartment",
+      "listing_type": "sale",
+      "price": 4500000000,
+      "address": {
+        "district": "Quận 1",
+        "city": "Hồ Chí Minh"
+      },
+      "primary_image": "https://cdn.domain.com/image.jpg"
+    }
+  ],
+  "meta": { "page": 1, "limit": 20, "total_items": 45, "total_pages": 3 },
+  "timestamp": "2026-03-06T22:00:00Z"
+}
+```
+
+**Error Response (400 Bad Request):**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_QUERY_PARAMETER",
+    "message": "Tham số lọc không hợp lệ",
+    "details": [
+      { "field": "listing_type", "issue": "Chỉ chấp nhận 'sale' hoặc 'rent'" }
+    ]
+  },
+  "timestamp": "2026-03-06T22:00:00Z"
+}
+```
+
+#### 4.1.2. View Property Details
+- **Method**: `GET`
+- **Endpoint URL**: `/properties/{slug}`
+- **Description**: Lấy toàn bộ thông tin chi tiết của một bất động sản dựa vào slug (URL thân thiện). Trả về kèm số điện thoại Zalo để Frontend xử lý tính năng chat.
+- **Request Body**: Không có.
+- **Query Parameters**: Không có.
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Lấy thông tin chi tiết thành công",
+  "data": {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "title": "Căn hộ chung cư cao cấp Quận 1",
+    "slug": "can-ho-chung-cu-cao-cap-quan-1",
+    "property_type": "apartment",
+    "listing_type": "sale",
+    "price": 4500000000,
+    "description": "Căn hộ view sông góc 2 mặt tiền...",
+    "legal_status": "pink_book",
+    "direction": "south_east",
+    "address": {
+      "full_address": "123 Lê Lợi", "ward": "Bến Nghé", "district": "Quận 1", "city": "Hồ Chí Minh",
+      "latitude": 10.7769, "longitude": 106.7009
+    },
+    "structure": { "bedrooms": 2, "bathrooms": 2, "balcony": true },
+    "area": { "usable_area": 75.5 },
+    "features": [
+      { "id": "uuid-f1", "name": "Hồ bơi vô cực" }
+    ],
+    "images": [
+      { "id": "img-1", "url": "https://cdn.domain.com/img1.jpg", "is_primary": true }
+    ],
+    "contact": {
+      "name": "Nguyễn Văn Admin",
+      "phone": "0901234567",
+      "zalo_phone": "0901234567" 
+    }
+  },
+  "timestamp": "2026-03-06T22:00:00Z"
+}
+```
+
+**Error Response (404 Not Found):**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "PROPERTY_NOT_FOUND",
+    "message": "Không tìm thấy bất động sản với đường dẫn này",
+    "details": []
+  },
+  "timestamp": "2026-03-06T22:00:00Z"
+}
+```
+
+#### 4.1.3. Send Contact Request
+- **Method**: `POST`
+- **Endpoint URL**: `/contacts`
+- **Description**: Khách hàng (Guest) gửi form yêu cầu tư vấn hoặc đặt lịch xem nhà.
+- **Query Parameters**: Không có.
+
+**Request Body (`application/json`):**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `property_id` | UUID | Yes | ID của bất động sản đang xem |
+| `customer_name` | String | Yes | Tên khách hàng |
+| `customer_phone` | String | Yes | Số điện thoại liên hệ |
+| `customer_email` | String | No | Địa chỉ email |
+| `message` | String | No | Nội dung lời nhắn / yêu cầu |
+
+```json
+{
+  "property_id": "123e4567-e89b-12d3-a456-426614174000",
+  "customer_name": "Trần Thị Khách",
+  "customer_phone": "0987654321",
+  "customer_email": "khachhang@email.com",
+  "message": "Tôi muốn xem căn hộ này vào cuối tuần."
+}
+```
+
+**Success Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Gửi yêu cầu liên hệ thành công. Chúng tôi sẽ phản hồi sớm nhất.",
+  "data": {},
+  "timestamp": "2026-03-06T22:00:00Z"
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Vui lòng kiểm tra lại thông tin nhập vào",
+    "details": [
+      { "field": "customer_phone", "issue": "Số điện thoại là trường bắt buộc" }
+    ]
+  },
+  "timestamp": "2026-03-06T22:00:00Z"
+}
+```
+
+### 4.2. Admin Endpoints
+
+#### 4.2.1. Create Property
+- **Method**: `POST`
+- **Endpoint URL**: `/admin/properties`
+- **Description**: Admin tạo một tin đăng bất động sản mới. Có thể bao gồm các object liên quan (`address`, `structure`, `area`) trong một payload.
+- **Query Parameters**: Không có.
+
+**Request Body (`application/json`):**
+*(Lưu ý: Payload hỗ trợ Nested Objects cho Address, Structure, Area)*
+
+```json
+{
+  "title": "Nhà phố mặt tiền Gò Vấp",
+  "property_type": "townhouse",
+  "listing_type": "sale",
+  "price": 12000000000,
+  "direction": "north",
+  "legal_status": "red_book",
+  "description": "Nhà đẹp, mới xây...",
+  "status": "published",
+  "address": {
+    "full_address": "123 Phan Văn Trị",
+    "district": "Quận Gò Vấp",
+    "city": "Hồ Chí Minh"
+  },
+  "structure": { "floors": 4, "bedrooms": 5 },
+  "area": { "land_area": 100, "usable_area": 350 },
+  "feature_ids": ["uuid-feature-1", "uuid-feature-2"]
+}
+```
+
+**Success Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Tạo bất động sản thành công",
+  "data": {
+    "id": "new-uuid-1234",
+    "slug": "nha-pho-mat-tien-go-vap"
+  },
+  "timestamp": "2026-03-06T22:00:00Z"
+}
+```
+
+**Error Response (401 Unauthorized):**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Token không hợp lệ hoặc đã hết hạn",
+    "details": []
+  },
+  "timestamp": "2026-03-06T22:00:00Z"
+}
+```
+
+#### 4.2.2. Edit Property
+- **Method**: `PUT`
+- **Endpoint URL**: `/admin/properties/{id}`
+- **Description**: Admin cập nhật thông tin bất động sản. Có thể cập nhật một phần dữ liệu (Partial Update).
+- **Query Parameters**: Không có.
+
+**Request Body (`application/json`):**
+```json
+{
+  "price": 11500000000,
+  "status": "sold"
+}
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Cập nhật bất động sản thành công",
+  "data": {
+    "id": "new-uuid-1234",
+    "status": "sold"
+  },
+  "timestamp": "2026-03-06T22:00:00Z"
+}
+```
+
+**Error Response (404 Not Found):**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "PROPERTY_NOT_FOUND",
+    "message": "Bất động sản không tồn tại",
+    "details": []
+  },
+  "timestamp": "2026-03-06T22:00:00Z"
+}
+```
+
+#### 4.2.3. Delete Property
+- **Method**: `DELETE`
+- **Endpoint URL**: `/admin/properties/{id}`
+- **Description**: Xóa vĩnh viễn tin đăng (Hệ thống sẽ tự động Cascade Delete các bảng liên quan: `images`, `address`, `structures`).
+- **Query Parameters & Request Body**: Không có.
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Xóa bất động sản thành công",
+  "data": {},
+  "timestamp": "2026-03-06T22:00:00Z"
+}
+```
+
+**Error Response (404 Not Found):**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "PROPERTY_NOT_FOUND",
+    "message": "Bất động sản không tồn tại",
+    "details": []
+  },
+  "timestamp": "2026-03-06T22:00:00Z"
+}
+```
+
+#### 4.2.4. Upload Images
+- **Method**: `POST`
+- **Endpoint URL**: `/admin/properties/{id}/images`
+- **Description**: Tải lên hình ảnh cho bất động sản. Content-Type phải là multipart/form-data.
+- **Query Parameters**: Không có.
+
+**Request Body (`multipart/form-data`):**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `files` | Array[File] | Yes | Mảng các file ảnh (JPEG, PNG) |
+| `primary_index`| Integer | No | Vị trí index của file sẽ làm ảnh đại diện (`is_primary = true`). Mặc định là 0. |
+
+**Success Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Tải ảnh lên thành công",
+  "data": [
+    { "id": "img-1", "url": "https://cdn.domain.com/1.jpg", "is_primary": true },
+    { "id": "img-2", "url": "https://cdn.domain.com/2.jpg", "is_primary": false }
+  ],
+  "timestamp": "2026-03-06T22:00:00Z"
+}
+```
+
+**Error Response (400 Bad Request):**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_FILE_TYPE",
+    "message": "Chỉ chấp nhận file định dạng JPG hoặc PNG",
+    "details": []
+  },
+  "timestamp": "2026-03-06T22:00:00Z"
+}
+```
+
+#### 4.2.5. Manage Features (Lấy danh sách)
+- **Method**: `GET`
+- **Endpoint URL**: `/admin/features`
+- **Description**: Lấy danh mục các tiện ích (Features) để hiển thị trên form tạo tin.
+- **Query Parameters**: Không có.
+- **Request Body**: Không có.
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Lấy danh sách tiện ích thành công",
+  "data": [
+    { "id": "uuid-1", "name": "Hồ bơi", "description": "Hồ bơi trong nhà" },
+    { "id": "uuid-2", "name": "Gara", "description": "Chỗ đậu xe ô tô" }
+  ],
+  "timestamp": "2026-03-06T22:00:00Z"
+}
+```
+
+#### 4.2.6. View Contact Requests
+- **Method**: `GET`
+- **Endpoint URL**: `/admin/contacts`
+- **Description**: Xem danh sách khách hàng đã điền form yêu cầu tư vấn.
+- **Request Body**: Không có.
+
+**Query Parameters:**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `page` | Integer | No | Số trang |
+| `limit` | Integer | No | Số bản ghi |
+| `status` | String | No | Lọc theo trạng thái: `new`, `contacted`, `resolved` |
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Lấy danh sách yêu cầu thành công",
+  "data": [
+    {
+      "id": "req-uuid-1",
+      "customer_name": "Trần Thị Khách",
+      "customer_phone": "0987654321",
+      "message": "Tôi muốn xem căn hộ này vào cuối tuần.",
+      "status": "new",
+      "property": { "id": "uuid-prop", "title": "Căn hộ Quận 1" },
+      "created_at": "2026-03-06T10:00:00Z"
+    }
+  ],
+  "meta": { "page": 1, "limit": 20, "total_items": 15, "total_pages": 1 },
+  "timestamp": "2026-03-06T22:00:00Z"
+}
+```
+
+#### 4.2.7. Edit Contact Request
+- **Method**: `PUT`
+- **Endpoint URL**: `/admin/contacts/{id}`
+- **Description**: Cập nhật trạng thái xử lý yêu cầu liên hệ và lưu ghi chú sau khi gọi điện cho khách.
+- **Query Parameters**: Không có.
+
+**Request Body (`application/json`):**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `status` | String | No | `new`, `contacted`, `resolved` |
+| `notes` | String | No | Ghi chú quá trình làm việc với khách |
+
+```json
+{
+  "status": "contacted",
+  "notes": "Khách hẹn đi xem nhà vào 9h sáng thứ 7. Đã xác nhận qua Zalo."
+}
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Cập nhật yêu cầu thành công",
+  "data": {
+    "id": "req-uuid-1",
+    "status": "contacted",
+    "notes": "Khách hẹn đi xem nhà vào 9h sáng thứ 7. Đã xác nhận qua Zalo."
+  },
+  "timestamp": "2026-03-06T22:00:00Z"
+}
+```
+
+**Error Response (404 Not Found):**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "CONTACT_NOT_FOUND",
+    "message": "Không tìm thấy yêu cầu liên hệ này",
+    "details": []
+  },
+  "timestamp": "2026-03-06T22:00:00Z"
+}
+```
