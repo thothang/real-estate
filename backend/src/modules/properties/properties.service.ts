@@ -423,12 +423,12 @@ export class PropertiesService {
 
     const propertyData: any = {};
     if (dto.title != null) propertyData.title = dto.title;
-    if (dto.property_type != null) propertyData.propertyType = dto.property_type;
+    if (dto.property_type != null)
+      propertyData.propertyType = dto.property_type;
     if (dto.listing_type != null) propertyData.listingType = dto.listing_type;
     if (dto.price != null) propertyData.price = dto.price;
     if (dto.direction != null) propertyData.direction = dto.direction;
-    if (dto.legal_status != null)
-      propertyData.legalStatus = dto.legal_status;
+    if (dto.legal_status != null) propertyData.legalStatus = dto.legal_status;
     if (dto.description != null) propertyData.description = dto.description;
     if (dto.status != null) propertyData.status = dto.status;
 

@@ -28,7 +28,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
       } else if (typeof res === 'object' && res !== null) {
         const body = res as any;
         message = body.message ?? message;
-        details = Array.isArray(body.message) ? body.message : body.details ?? [];
+        details = Array.isArray(body.message)
+          ? body.message
+          : (body.details ?? []);
         code =
           body.code ??
           HttpStatus[status] ??
@@ -49,4 +51,3 @@ export class HttpExceptionFilter implements ExceptionFilter {
     });
   }
 }
-

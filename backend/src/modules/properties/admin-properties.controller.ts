@@ -44,11 +44,7 @@ export class AdminPropertiesController {
   ) {
     const pageNum = Math.max(1, Number(page) || 1);
     const limitNum = Math.max(1, Number(limit) || 20);
-    return this.propertiesService.findAllAdmin(
-      pageNum,
-      limitNum,
-      status,
-    );
+    return this.propertiesService.findAllAdmin(pageNum, limitNum, status);
   }
 
   @Get(':id')
@@ -58,18 +54,12 @@ export class AdminPropertiesController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(
-    @Body() dto: CreatePropertyDto,
-    @CurrentUser() user: User,
-  ) {
+  async create(@Body() dto: CreatePropertyDto, @CurrentUser() user: User) {
     return this.propertiesService.createPropertyAdmin(dto, user.id);
   }
 
   @Put(':id')
-  async update(
-    @Param('id') id: string,
-    @Body() dto: UpdatePropertyDto,
-  ) {
+  async update(@Param('id') id: string, @Body() dto: UpdatePropertyDto) {
     return this.propertiesService.updatePropertyAdmin(id, dto);
   }
 
@@ -80,15 +70,14 @@ export class AdminPropertiesController {
 
   @Post(':id/images')
   @HttpCode(HttpStatus.CREATED)
-  @UseInterceptors(
-    FilesInterceptor('files', 10, propertyImagesMulterOptions),
-  )
+  @UseInterceptors(FilesInterceptor('files', 10, propertyImagesMulterOptions))
   async uploadImages(
     @Param('id') propertyId: string,
     @UploadedFiles() files: Express.Multer.File[],
     @Body('primary_index') primaryIndex?: string,
   ) {
-    const primary = primaryIndex != null ? parseInt(String(primaryIndex), 10) : 0;
+    const primary =
+      primaryIndex != null ? parseInt(String(primaryIndex), 10) : 0;
     const saved = await this.uploadsService.savePropertyImages(
       files || [],
       propertyId,

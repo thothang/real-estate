@@ -14,13 +14,8 @@ interface ResponseShape<T> {
 }
 
 @Injectable()
-export class ResponseInterceptor<T>
-  implements NestInterceptor<T, any>
-{
-  intercept(
-    context: ExecutionContext,
-    next: CallHandler<T>,
-  ): Observable<any> {
+export class ResponseInterceptor<T> implements NestInterceptor<T, any> {
+  intercept(context: ExecutionContext, next: CallHandler<T>): Observable<any> {
     return next.handle().pipe(
       map((value: any) => {
         const now = new Date().toISOString();
@@ -49,4 +44,3 @@ export class ResponseInterceptor<T>
     );
   }
 }
-

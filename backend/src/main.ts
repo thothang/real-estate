@@ -1,9 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import {
-  ClassSerializerInterceptor,
-  ValidationPipe,
-} from '@nestjs/common';
+import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -23,10 +20,7 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api/v1');
 
-  app.use(
-    '/uploads',
-    express.static(join(process.cwd(), 'uploads')),
-  );
+  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -48,9 +42,8 @@ async function bootstrap() {
             const childConstraints = c.constraints
               ? Object.values(c.constraints)
               : undefined;
-            return (childConstraints?.length
-              ? childConstraints
-              : ['Invalid value']
+            return (
+              childConstraints?.length ? childConstraints : ['Invalid value']
             ).map((issue) => ({ field: `${e.property}.${c.property}`, issue }));
           });
 

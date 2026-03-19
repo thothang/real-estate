@@ -55,10 +55,12 @@ describe('AppController (e2e)', () => {
               const childConstraints = c.constraints
                 ? Object.values(c.constraints)
                 : undefined;
-              return (childConstraints?.length
-                ? childConstraints
-                : ['Invalid value']
-              ).map((issue) => ({ field: `${e.property}.${c.property}`, issue }));
+              return (
+                childConstraints?.length ? childConstraints : ['Invalid value']
+              ).map((issue) => ({
+                field: `${e.property}.${c.property}`,
+                issue,
+              }));
             });
 
             return [...base, ...childDetails];

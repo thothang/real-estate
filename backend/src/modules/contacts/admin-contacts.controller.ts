@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Put, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -19,11 +27,7 @@ export class AdminContactsController {
   }
 
   @Put(':id')
-  async update(
-    @Param('id') id: string,
-    @Body() dto: UpdateContactRequestDto,
-  ) {
+  async update(@Param('id') id: string, @Body() dto: UpdateContactRequestDto) {
     return this.contactsService.updateAdmin(id, dto);
   }
 }
-
